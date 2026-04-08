@@ -233,7 +233,7 @@ class ApiService {
     try {
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('$uploadBaseUrl/upload'),
+        Uri.parse('$authBaseUrl/photos'),
       );
       request.headers['Authorization'] = 'Bearer $token';
       request.files.add(await http.MultipartFile.fromPath('image', filePath));
@@ -241,12 +241,42 @@ class ApiService {
       var response = await request.send();
       var responseData = await response.stream.bytesToString();
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return jsonDecode(responseData);
-      } else {
+      print("DEBUG UPLOAD - Status: ${response.statusCode}");
+      print("DEBUG UPLOAD - Raw Body: $responseData");
+
+      // Nettoyage de la réponse si elle contient du HTML parasite (ex: <br /> ou xdebug)
+      String cleanData = responseData.trim();
+
+      // Si on trouve du JSON après le <br />, on le récupère
+      if (cleanData.contains('{')) {
+        int jsonStartIndex = cleanData.indexOf('{');
+        cleanData = cleanData.substring(jsonStartIndex);
+        // On s'assure qu'on ne garde pas de HTML après le JSON si présent
+        int jsonEndIndex = cleanData.lastIndexOf('}');
+        if (jsonEndIndex != -1) {
+          cleanData = cleanData.substring(0, jsonEndIndex + 1);
+        }
+      }
+
+      // Détection d'erreurs PHP critiques dans le texte brut
+      if (responseData.contains('Fatal error') ||
+          responseData.contains('Token invalide')) {
         throw Exception(
-          "Échec de l'upload (Status: ${response.statusCode}, Body: $responseData)",
+          "Session expirée ou erreur serveur (Token invalide). Veuillez vous déconnecter et vous reconnecter.",
         );
+      }
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        try {
+          final decoded = jsonDecode(cleanData);
+          print("DEBUG UPLOAD - Decoded Map: $decoded");
+          return decoded;
+        } catch (e) {
+          print("DEBUG UPLOAD - Decode Error for: $cleanData");
+          throw Exception("Réponse serveur malformée.");
+        }
+      } else {
+        throw Exception("Échec de l'upload (Status: ${response.statusCode})");
       }
     } catch (e) {
       throw Exception("Erreur lors de l'upload : $e");

@@ -29,7 +29,21 @@ class ProfileScreen extends StatelessWidget {
           // Normalement on arrive ici seulement si authentifié,
           // mais on ajoute une sécurité.
           if (!auth.isAuthenticated) {
-            return const Center(child: Text('Veuillez vous connecter.'));
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('Veuillez vous connecter.'),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/login');
+                    },
+                    child: const Text('Se connecter'),
+                  ),
+                ],
+              ),
+            );
           }
 
           return SingleChildScrollView(
@@ -53,7 +67,7 @@ class ProfileScreen extends StatelessWidget {
 
                 // Informations principales
                 Text(
-                  'Bienvenue, Photographe',
+                  'Bienvenue, ${auth.userEmail?.split('@').first ?? 'Photographe'}',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -71,8 +85,7 @@ class ProfileScreen extends StatelessWidget {
                   context,
                   icon: Icons.email_outlined,
                   title: 'Email',
-                  subtitle:
-                      'photographe@photopro.net', // Pourrait être dynamique si stocké
+                  subtitle: auth.userEmail ?? 'Non renseigné',
                 ),
                 const SizedBox(height: 16),
                 _buildInfoTile(

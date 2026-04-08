@@ -55,29 +55,35 @@ class _UploadScreenState extends State<UploadScreen> {
         token,
       );
 
+      debugPrint("DEBUG UPLOAD SCREEN - RESPONSE: $response");
+
       if (mounted) {
         // Enregistrer dans l'historique
         final uploadItem = UploadHistoryItem(
           id:
-              response['photo_id'] ??
+              response['photo_id']?.toString() ??
               DateTime.now().millisecondsSinceEpoch.toString(),
           filePath: _selectedImage!.path,
-          s3Url: response['url'],
+          s3Url: response['url'] ?? '',
           uploadDate: DateTime.now(),
           isSynced: true,
         );
-        context.read<UploadProvider>().addToHistory(uploadItem);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Photo envoyée avec succès !'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        setState(() {
-          _selectedImage = null;
-        });
-        Navigator.pop(context);
+        debugPrint("DEBUG UPLOAD SCREEN - ADDING TO HISTORY: ${uploadItem.id}");
+        await context.read<UploadProvider>().addToHistory(uploadItem);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Photo envoyée avec succès !'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          setState(() {
+            _selectedImage = null;
+          });
+          Navigator.pop(context);
+        }
       }
     } catch (e) {
       if (mounted) {

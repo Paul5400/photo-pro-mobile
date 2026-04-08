@@ -32,6 +32,10 @@ class PhotoProApp extends StatelessWidget {
     return MaterialApp(
       title: 'PhotoPro.net',
       debugShowCheckedModeBanner: false,
+      routes: {
+        '/login': (context) => const LoginScreen(),
+        '/profile': (context) => const ProfileScreen(),
+      },
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(

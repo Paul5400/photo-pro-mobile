@@ -16,46 +16,51 @@ class _PhotographerGalleriesScreenState
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<GalleryProvider>().loadPhotographerGalleries();
-    });
+    // Nous ne forçons pas le rafraîchissement depuis l'API ici pour ne pas écraser 
+    // les galeries débloquées stockées localement.
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mes Galeries Privées'),
+        title: const Text('Mes Galeries'),
         centerTitle: true,
       ),
       body: Consumer<GalleryProvider>(
         builder: (context, provider, child) {
-          if (provider.isLoading && provider.allPhotographerGalleries.isEmpty) {
+          final galleries = provider.allPhotographerGalleries;
+
+          if (provider.isLoading && galleries.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (provider.errorMessage != null &&
-              provider.allPhotographerGalleries.isEmpty) {
+          if (galleries.isEmpty) {
             return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text(provider.errorMessage!),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => provider.loadPhotographerGalleries(),
-                    child: const Text('Réessayer'),
-                  ),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.folder_open_rounded,
+                      size: 64,
+                      color: Colors.grey[400],
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Vous n\'avez aucune galerie.\nDébloquez une galerie privée avec un code pour l\'ajouter ici.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.black54),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Accéder à une galerie'),
+                    ),
+                  ],
+                ),
               ),
-            );
-          }
-
-          if (provider.allPhotographerGalleries.isEmpty) {
-            return const Center(
-              child: Text('Vous n\'avez aucune galerie pour le moment.'),
             );
           }
 
@@ -63,9 +68,9 @@ class _PhotographerGalleriesScreenState
             onRefresh: () => provider.loadPhotographerGalleries(),
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: provider.allPhotographerGalleries.length,
+              itemCount: galleries.length,
               itemBuilder: (context, index) {
-                final gallery = provider.allPhotographerGalleries[index];
+                final gallery = galleries[index];
                 return Card(
                   margin: const EdgeInsets.only(bottom: 12),
                   child: ListTile(
@@ -95,7 +100,7 @@ class _PhotographerGalleriesScreenState
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     subtitle: Text(
-                      '${gallery.photosCount ?? 0} photos • ${gallery.publicationDate?.toLocal().toString().split(' ')[0] ?? 'Date inconnue'}',
+                      '${gallery.photosCount ?? gallery.photos.length} photos • ${gallery.isPrivate ? "Privée" : "Publique"}',
                     ),
                     trailing: const Icon(Icons.chevron_right_rounded),
                     onTap: () {

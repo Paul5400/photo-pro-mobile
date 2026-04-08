@@ -6,16 +6,18 @@ class AuthProvider with ChangeNotifier {
   final ApiService _apiService = ApiService();
 
   String? _token;
+  String? _userEmail;
   bool _isLoading = false;
   String? _errorMessage;
 
   String? get token => _token;
+  String? get userEmail => _userEmail;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _token != null;
 
   AuthProvider() {
-    _loadToken();
+    _loadInitialData();
   }
 
   /// Tente de se connecter avec email/password
@@ -27,10 +29,12 @@ class AuthProvider with ChangeNotifier {
     try {
       final response = await _apiService.login(email, password);
       _token = response['token'];
+      _userEmail = email;
 
-      // Persister le token
+      // Persister le token et l'email
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('jwt_token', _token!);
+      await prefs.setString('user_email', email);
 
       _isLoading = false;
       notifyListeners();
@@ -43,18 +47,21 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  /// Charge le token stocké au lancement de l'app
-  Future<void> _loadToken() async {
+  /// Charge le token et l'email stockés au lancement de l'app
+  Future<void> _loadInitialData() async {
     final prefs = await SharedPreferences.getInstance();
     _token = prefs.getString('jwt_token');
+    _userEmail = prefs.getString('user_email');
     notifyListeners();
   }
 
   /// Déconnexion
   Future<void> logout() async {
     _token = null;
+    _userEmail = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('jwt_token');
+    await prefs.remove('user_email');
     notifyListeners();
   }
 
