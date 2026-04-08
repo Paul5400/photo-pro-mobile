@@ -3,7 +3,11 @@ import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'providers/gallery_provider.dart';
 import 'providers/auth_provider.dart';
+import 'providers/upload_provider.dart';
+import 'services/api_service.dart';
 import 'views/login_screen.dart';
+import 'views/profile_screen.dart';
+import 'views/gallery_detail_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,6 +17,7 @@ Future<void> main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => GalleryProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => UploadProvider()),
       ],
       child: const PhotoProApp(),
     ),
@@ -43,12 +48,17 @@ class PhotoProApp extends StatelessWidget {
         ),
         cardTheme: CardTheme(
           elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shadowColor: Colors.black.withOpacity(0.1),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(
@@ -99,7 +109,8 @@ class _PublicGalleryScreenState extends State<PublicGalleryScreen> {
             snap: true,
             expandedHeight: 120.0,
             flexibleSpace: FlexibleSpaceBar(
-              title: Text('PhotoPro.net', 
+              title: Text(
+                'PhotoPro.net',
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.primary,
                   fontWeight: FontWeight.bold,
@@ -117,14 +128,25 @@ class _PublicGalleryScreenState extends State<PublicGalleryScreen> {
               Consumer<AuthProvider>(
                 builder: (context, auth, child) {
                   return IconButton(
-                    icon: Icon(auth.isAuthenticated ? Icons.logout_rounded : Icons.person_outline_rounded),
+                    icon: Icon(
+                      auth.isAuthenticated
+                          ? Icons.account_circle_rounded
+                          : Icons.person_outline_rounded,
+                    ),
                     onPressed: () {
                       if (auth.isAuthenticated) {
-                        auth.logout();
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ProfileScreen(),
+                          ),
+                        );
                       } else {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const LoginScreen()),
+                          MaterialPageRoute(
+                            builder: (context) => const LoginScreen(),
+                          ),
                         );
                       }
                     },
@@ -142,7 +164,8 @@ class _PublicGalleryScreenState extends State<PublicGalleryScreen> {
                 );
               }
 
-              if (provider.errorMessage != null && provider.publicGalleries.isEmpty) {
+              if (provider.errorMessage != null &&
+                  provider.publicGalleries.isEmpty) {
                 return SliverFillRemaining(
                   child: Center(
                     child: Padding(
@@ -150,7 +173,11 @@ class _PublicGalleryScreenState extends State<PublicGalleryScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.error_outline_rounded, size: 64, color: Colors.red[300]),
+                          Icon(
+                            Icons.error_outline_rounded,
+                            size: 64,
+                            color: Colors.red[300],
+                          ),
                           const SizedBox(height: 16),
                           Text(
                             provider.errorMessage!,
@@ -176,10 +203,18 @@ class _PublicGalleryScreenState extends State<PublicGalleryScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.photo_library_outlined, size: 80, color: Colors.grey[400]),
+                        Icon(
+                          Icons.photo_library_outlined,
+                          size: 80,
+                          color: Colors.grey[400],
+                        ),
                         const SizedBox(height: 16),
-                        Text('Aucune galerie publique', 
-                          style: TextStyle(color: Colors.grey[600], fontSize: 18),
+                        Text(
+                          'Aucune galerie publique',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 18,
+                          ),
                         ),
                       ],
                     ),
@@ -188,15 +223,21 @@ class _PublicGalleryScreenState extends State<PublicGalleryScreen> {
               }
 
               return SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final gallery = provider.publicGalleries[index];
-                      return GalleryCard(gallery: gallery);
-                    },
-                    childCount: provider.publicGalleries.length,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,
+                ),
+                sliver: SliverGrid(
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 450,
+                    mainAxisSpacing: 20,
+                    crossAxisSpacing: 20,
+                    mainAxisExtent: 340,
                   ),
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    final gallery = provider.publicGalleries[index];
+                    return GalleryCard(gallery: gallery);
+                  }, childCount: provider.publicGalleries.length),
                 ),
               );
             },
@@ -215,51 +256,89 @@ class _PublicGalleryScreenState extends State<PublicGalleryScreen> {
     final TextEditingController codeController = TextEditingController();
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Entrez votre code'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Pour accéder à une galerie privée, veuillez saisir le code fourni par le photographe.'),
-            const SizedBox(height: 16),
-            TextField(
-              controller: codeController,
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.vpn_key_outlined),
-                labelText: 'Code d\'accès',
-                hintText: 'Ex: ABC-123',
-              ),
-              autofocus: true,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final provider = context.read<GalleryProvider>();
-              final success = await provider.accessPrivateGallery(codeController.text);
-              if (success && mounted) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Galerie privée accessible !')),
-                );
-              } else if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    backgroundColor: Colors.redAccent,
-                    content: Text(provider.errorMessage ?? 'Code invalide'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Accès Galerie Privée'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Saisissez le code fourni par votre photographe.',
+                  style: TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: codeController,
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.vpn_key_outlined),
+                    labelText: 'Code d\'accès',
+                    hintText: 'Ex: MARIAGE_2026',
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
                   ),
-                );
-              }
-            },
-            child: const Text('Vérifier'),
+                  autofocus: true,
+                  textCapitalization: TextCapitalization.characters,
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Annuler'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final provider = context.read<GalleryProvider>();
+                  final success = await provider.accessPrivateGallery(
+                    codeController.text.trim(),
+                  );
+                  if (success && mounted) {
+                    Navigator.pop(context); // Ferme le dialogue
+                    // Navigue vers la galerie débloquée
+                    if (provider.currentPrivateGallery != null) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (context) => GalleryDetailScreen(
+                                gallery: provider.currentPrivateGallery!,
+                                accessCodeOverride:
+                                    provider.lastPrivateAccessCode,
+                              ),
+                        ),
+                      );
+                    }
+                  } else if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        backgroundColor: Colors.redAccent,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        content: Row(
+                          children: [
+                            const Icon(
+                              Icons.error_outline,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(provider.errorMessage ?? 'Code invalide'),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                },
+                child: const Text('Accéder'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 }
@@ -270,55 +349,161 @@ class GalleryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // On utilise la première photo comme image de couverture si coverUrl est vide
+    final String effectiveCoverUrl =
+        gallery.coverPhotoUrl.isNotEmpty
+            ? gallery.coverPhotoUrl
+            : (gallery.photos.isNotEmpty ? gallery.photos.first.url : '');
+
     return Card(
-      margin: const EdgeInsets.only(bottom: 20),
+      margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
+      elevation: 4,
+      shadowColor: Colors.black.withOpacity(0.2),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: InkWell(
-        onTap: () {
-          // TODO: Vers le détail de la galerie
+        onTap: () async {
+          try {
+            // Pour les galeries publiques, l'accès se fait par l'ID simple
+            final fullGallery = await ApiService().fetchGalleryWithAccess(
+              gallery.id,
+            );
+            if (context.mounted) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder:
+                      (context) => GalleryDetailScreen(gallery: fullGallery),
+                ),
+              );
+            }
+          } catch (e) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Erreur lors du chargement des photos"),
+                ),
+              );
+            }
+          }
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AspectRatio(
-              aspectRatio: 16 / 9,
+            Expanded(
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  gallery.coverPhotoUrl.isNotEmpty
-                      ? Image.network(gallery.coverPhotoUrl, fit: BoxFit.cover)
+                  effectiveCoverUrl.isNotEmpty
+                      ? Image.network(
+                        effectiveCoverUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder:
+                            (context, error, stackTrace) => Container(
+                              color: Colors.grey[200],
+                              child: const Icon(
+                                Icons.broken_image,
+                                color: Colors.grey,
+                              ),
+                            ),
+                      )
                       : Container(
-                          color: Colors.grey[200],
-                          child: Icon(Icons.image, size: 50, color: Colors.grey[400]),
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                        child: Icon(
+                          Icons.auto_awesome_mosaic_rounded,
+                          size: 40,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
+                      ),
+                  if (gallery.isPrivate)
+                    Positioned(
+                      top: 12,
+                      right: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.6),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.lock_rounded,
+                              color: Colors.white,
+                              size: 14,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              'Privé',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          gallery.title,
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                      ),
-                      const Icon(Icons.chevron_right_rounded, color: Colors.grey),
-                    ],
+                  Text(
+                    gallery.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.5,
+                    ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Text(
                     gallery.description,
-                    style: TextStyle(color: Colors.grey[600], height: 1.4),
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 13,
+                      height: 1.3,
+                    ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.photo_library_outlined,
+                        size: 14,
+                        color: Colors.grey[500],
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${gallery.photosCount ?? gallery.photos.length} photos',
+                        style: TextStyle(
+                          color: Colors.grey[500],
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        'Détails',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.secondary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

@@ -45,5 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>PhotoPro a besoin d'accéder à votre appareil photo pour vous permettre de prendre des photos et de les envoyer directement sur le serveur.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>PhotoPro a besoin d'accéder à votre galerie pour vous permettre de sélectionner des photos à envoyer sur le serveur.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>PhotoPro a besoin d'accéder au microphone si vous enregistrez des vidéos.</string>
 </dict>
 </plist>

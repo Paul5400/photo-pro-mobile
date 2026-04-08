@@ -1,33 +1,31 @@
 class Comment {
   final String id;
-  final String text;
   final String photoId;
+  final String authorName;
+  final String content;
   final DateTime createdAt;
 
   Comment({
     required this.id,
-    required this.text,
     required this.photoId,
+    required this.authorName,
+    required this.content,
     required this.createdAt,
   });
 
   factory Comment.fromJson(Map<String, dynamic> json) {
     return Comment(
-      id: json['id'] ?? '',
-      text: json['text'] ?? '',
-      photoId: json['photo_id'] ?? '',
-      createdAt: DateTime.parse(
-        json['created_at'] ?? DateTime.now().toIso8601String(),
-      ),
+      id: json['id']?.toString() ?? '',
+      photoId: json['photo_id']?.toString() ?? '',
+      authorName:
+          json['auteur'] ?? json['nom_auteur'] ?? json['pseudo'] ?? 'Anonyme',
+      content: json['contenu'] ?? json['text'] ?? '',
+      createdAt:
+          json['created_at'] != null
+              ? DateTime.parse(json['created_at'])
+              : (json['date_commentaire'] != null
+                  ? DateTime.parse(json['date_commentaire'])
+                  : DateTime.now()),
     );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'text': text,
-      'photo_id': photoId,
-      'created_at': createdAt.toIso8601String(),
-    };
   }
 }

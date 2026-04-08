@@ -12,6 +12,7 @@ class Gallery {
   final bool isPrivate;
   final String? accessCode;
   final List<Photo> photos;
+  final int? photosCount;
 
   Gallery({
     required this.id,
@@ -23,28 +24,49 @@ class Gallery {
     required this.isPrivate,
     this.accessCode,
     this.photos = const [],
+    this.photosCount,
   });
 
   factory Gallery.fromJson(Map<String, dynamic> json) {
+    // Gestion du nouveau format avec "galerie" et "photos" séparés
+    final Map<String, dynamic> galleryData =
+        json.containsKey('galerie') ? json['galerie'] : json;
+    final List<dynamic> photosData =
+        json.containsKey('photos')
+            ? json['photos']
+            : (galleryData['photos'] ?? []);
+
     return Gallery(
-      id: json['id'] ?? '',
-      title: json['title'] ?? '',
-      description: json['description'] ?? '',
-      coverPhotoUrl: json['cover_photo_url'] ?? '',
+      id: galleryData['id'] ?? galleryData['galerie_id'] ?? '',
+      title: galleryData['titre'] ?? galleryData['title'] ?? '',
+      description: galleryData['description'] ?? '',
+      coverPhotoUrl:
+          galleryData['cover_url'] ??
+          galleryData['cover_photo_url'] ??
+          (photosData.isNotEmpty ? photosData.first['url'] ?? '' : ''),
       publicationDate:
-          json['publication_date'] != null
-              ? DateTime.parse(json['publication_date'])
-              : null,
+          galleryData['published_at'] != null
+              ? DateTime.parse(galleryData['published_at'])
+              : (galleryData['publication_date'] != null
+                  ? DateTime.parse(galleryData['publication_date'])
+                  : null),
       layoutMode: LayoutMode.values.firstWhere(
-        (e) => e.toString().split('.').last == (json['layout_mode'] ?? 'grid'),
+        (e) =>
+            e.toString().split('.').last ==
+            (galleryData['mode_mise_en_page'] ??
+                galleryData['layout_mode'] ??
+                'grid'),
         orElse: () => LayoutMode.grid,
       ),
-      isPrivate: json['is_private'] ?? false,
-      accessCode: json['access_code'],
-      photos:
-          json['photos'] != null
-              ? (json['photos'] as List).map((p) => Photo.fromJson(p)).toList()
-              : [],
+      isPrivate:
+          galleryData['type'] == 'privée' ||
+          (galleryData['is_private'] ?? false),
+      accessCode: galleryData['access_code'] ?? galleryData['code'],
+      photos: photosData.map((p) => Photo.fromJson(p)).toList(),
+      photosCount:
+          galleryData['photos_count'] ??
+          galleryData['nb_photos'] ??
+          photosData.length,
     );
   }
 

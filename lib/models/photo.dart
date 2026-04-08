@@ -1,3 +1,5 @@
+import 'comment.dart';
+
 class Photo {
   final String id;
   final String? title;
@@ -6,6 +8,7 @@ class Photo {
   final String originalFileName;
   final DateTime uploadDate;
   final String url;
+  final List<Comment> comments;
 
   Photo({
     required this.id,
@@ -15,19 +18,35 @@ class Photo {
     required this.originalFileName,
     required this.uploadDate,
     required this.url,
+    this.comments = const [],
   });
 
   factory Photo.fromJson(Map<String, dynamic> json) {
+    final commentsData = json['commentaires'];
+    final List<Comment> parsedComments =
+        commentsData is List
+            ? commentsData
+                .whereType<Map<String, dynamic>>()
+                .map(Comment.fromJson)
+                .toList()
+            : const [];
+
     return Photo(
-      id: json['id'] ?? '',
-      title: json['title'],
+      id: json['id']?.toString() ?? '',
+      title: json['titre'] ?? json['title'],
       mimeType: json['mime_type'] ?? 'image/jpeg',
-      sizeMb: (json['size_mb'] ?? 0.0).toDouble(),
-      originalFileName: json['original_file_name'] ?? 'unknown.jpg',
+      sizeMb: (json['taille_mo'] ?? json['size_mb'] ?? 0.0).toDouble(),
+      originalFileName:
+          json['nom_fichier_original'] ??
+          json['original_file_name'] ??
+          'unknown.jpg',
       uploadDate: DateTime.parse(
-        json['upload_date'] ?? DateTime.now().toIso8601String(),
+        json['uploaded_at'] ??
+            json['upload_date'] ??
+            DateTime.now().toIso8601String(),
       ),
-      url: json['url'] ?? '',
+      url: json['chemin_s3'] ?? json['url'] ?? '',
+      comments: parsedComments,
     );
   }
 
